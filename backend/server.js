@@ -23,10 +23,16 @@ async function start() {
     app.get('/', (req, res) => res.send('API running…'));
 
     // ভবিষ্যতে API উদাহরণ
-    // app.get('/api/matches', async (req, res) => {
+// app.get('/api/matches', async (req, res) => {
     //   const matches = await db.collection('matches').find().toArray();
     //   res.json(matches);
     // });
+
+   app.post('/api/join', async (req, res) => {
+   const { userId, matchId } = req.body;
+   await db.collection('participants').insertOne({ userId, matchId });
+   res.json({ success: true });
+});
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () =>

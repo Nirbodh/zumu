@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -16,53 +16,48 @@ const HomeScreen = () => {
   const [currentGame, setCurrentGame] = useState('pubg');
   const [currentMatchTab, setCurrentMatchTab] = useState('upcoming');
 
+  // ✅ নতুন স্টেট: API থেকে ম্যাচ
+  const [matches, setMatches] = useState([]);
+
+  useEffect(() => {
+    // Render Backend থেকে ডাটা ফেচ
+    fetch('https://zumu.onrender.com/api/matches')
+      .then(res => res.json())
+      .then(data => setMatches(data))
+      .catch(err => console.error('Fetch error:', err));
+  }, []);
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <Header title="zumu" subtitle="Gaming Tournament Platform" />
-        
-        <StatusBar 
-          username="ovimahathirmohammad" 
-          balance={500} 
-        />
-        
+        <StatusBar username="ovimahathirmohammad" balance={500} />
+
+        {/* Tabs */}
         <View style={styles.navTabs}>
-          <TouchableOpacity 
-            style={[styles.navTab, currentMatchTab === 'upcoming' && styles.navTabActive]}
-            onPress={() => setCurrentMatchTab('upcoming')}
-          >
-            <Text style={[styles.navTabText, currentMatchTab === 'upcoming' && styles.navTabTextActive]}>
-              Upcoming
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.navTab, currentMatchTab === 'live' && styles.navTabActive]}
-            onPress={() => setCurrentMatchTab('live')}
-          >
-            <Text style={[styles.navTabText, currentMatchTab === 'live' && styles.navTabTextActive]}>
-              Live
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.navTab, currentMatchTab === 'completed' && styles.navTabActive]}
-            onPress={() => setCurrentMatchTab('completed')}
-          >
-            <Text style={[styles.navTabText, currentMatchTab === 'completed' && styles.navTabTextActive]}>
-              Completed
-            </Text>
-          </TouchableOpacity>
+          {['upcoming','live','completed'].map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.navTab, currentMatchTab === tab && styles.navTabActive]}
+              onPress={() => setCurrentMatchTab(tab)}
+            >
+              <Text
+                style={[
+                  styles.navTabText,
+                  currentMatchTab === tab && styles.navTabTextActive,
+                ]}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-        
-        <GameSelection 
-          currentGame={currentGame} 
-          onGameSelect={setCurrentGame} 
-        />
-        
-        <MatchList 
-          game={currentGame} 
-          tab={currentMatchTab} 
-        />
-        
+
+        <GameSelection currentGame={currentGame} onGameSelect={setCurrentGame} />
+
+        {/* ✅ API থেকে পাওয়া ম্যাচ ডাটা পাঠাচ্ছি */}
+        <MatchList matches={matches} />
+
         <ParticipantsTable />
       </ScrollView>
     </View>
@@ -70,14 +65,8 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0c23',
-  },
-  scrollView: {
-    flex: 1,
-    padding: 15,
-  },
+  container: { flex: 1, backgroundColor: '#0a0c23' },
+  scrollView: { flex: 1, padding: 15 },
   navTabs: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -91,16 +80,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  navTabActive: {
-    backgroundColor: '#ff8a00',
-  },
-  navTabText: {
-    color: '#ccc',
-    fontWeight: 'bold',
-  },
-  navTabTextActive: {
-    color: '#fff',
-  },
+  navTabActive: { backgroundColor: '#ff8a00' },
+  navTabText: { color: '#ccc', fontWeight: 'bold' },
+  navTabTextActive: { color: '#fff' },
 });
 
 export default HomeScreen;

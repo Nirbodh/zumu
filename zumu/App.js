@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Bottom-tab screens
+// Screens
+import LoginScreen from './screens/LoginScreen';
+import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
 import TournamentsScreen from './screens/TournamentsScreen';
 import MyGameScreen from './screens/MyGameScreen';
@@ -12,37 +16,31 @@ import WalletScreen from './screens/WalletScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import TopUpScreen from './screens/TopUpScreen';
 
-// Auth screens (এগুলো রাখা আছে, পরে আবার ব্যবহার করতে পারবেন)
-import LoginScreen from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-
+const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
 
 function BottomTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'Tournaments') iconName = focused ? 'trophy' : 'trophy-outline';
-          else if (route.name === 'MyGame') iconName = focused ? 'game-controller' : 'game-controller-outline';
-          else if (route.name === 'Wallet') iconName = focused ? 'wallet' : 'wallet-outline';
-          else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
-          else if (route.name === 'TopUp') iconName = focused ? 'card' : 'card-outline';
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
+        headerShown: false,
         tabBarActiveTintColor: '#ff8a00',
-        tabBarInactiveTintColor: 'gray',
+        tabBarInactiveTintColor: '#ccc',
         tabBarStyle: {
           backgroundColor: '#0a0c23',
           borderTopColor: '#ff8a00',
+          borderTopWidth: 1,
         },
-        headerStyle: { backgroundColor: '#0a0c23' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: 'bold' },
+        tabBarIcon: ({ color, size }) => {
+          let iconName;
+          if (route.name === 'Home') iconName = 'home';
+          else if (route.name === 'Tournaments') iconName = 'trophy';
+          else if (route.name === 'MyGame') iconName = 'game-controller';
+          else if (route.name === 'Wallet') iconName = 'wallet';
+          else if (route.name === 'Profile') iconName = 'person';
+          else if (route.name === 'TopUp') iconName = 'card';
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
@@ -56,15 +54,37 @@ function BottomTabs() {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const t = await AsyncStorage.getItem('userToken');
+      setToken(t);
+      setLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading…</Text>
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* ডেভেলপমেন্টে সরাসরি Bottom Tabs দেখাতে প্রথম রুট হিসেবে Main দিন */}
-        <Stack.Screen name="Main" component={BottomTabs} />
-
-        {/* লগইন/রেজিস্ট্রেশন স্ক্রিন রেখে দিলাম, প্রোডাকশনে আবার প্রথমে ব্যবহার করবেন */}
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
+        {token ? (
+          <Stack.Screen name="Main" component={BottomTabs} />
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

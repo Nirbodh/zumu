@@ -1,111 +1,48 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+
+const API = 'https://zumu.onrender.com';
 
 export default function RegisterScreen({ navigation }) {
   const [username, setUsername] = useState('');
-  const [email, setEmail]     = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleRegister = () => {
-    // এখানে পরে আপনার API/Firebase কল বসাতে পারবেন
-    console.log('Register info:', { username, email, password });
-
-    // রেজিস্টার সফল হলে হোমে (Main tabs) নিয়ে যান
-    navigation.replace('Main');
+  const register = async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, phone, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
+      Alert.alert('Success', 'Account created. Please login.');
+      navigation.replace('Login');
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={styles.logo}>BoomBattle</Text>
-      <Text style={styles.subtitle}>Create a New Account</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        placeholderTextColor="#888"
-        value={username}
-        onChangeText={setUsername}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#888"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#888"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      <TouchableOpacity style={styles.button} onPress={handleRegister}>
-        <Text style={styles.buttonText}>Register</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Register</Text>
+      <TextInput placeholder="Username" value={username} onChangeText={setUsername} style={styles.input} />
+      <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} />
+      <TextInput placeholder="Phone" value={phone} onChangeText={setPhone} style={styles.input} />
+      <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={styles.input} secureTextEntry />
+      <TouchableOpacity style={styles.btn} onPress={register}>
+        <Text style={styles.btnText}>Register</Text>
       </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.link}>Already have an account? Log In</Text>
-      </TouchableOpacity>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0c23',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  logo: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ff8a00',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  subtitle: {
-    color: '#ccc',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    color: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-  },
-  button: {
-    backgroundColor: '#ff8a00',
-    padding: 15,
-    borderRadius: 10,
-  },
-  buttonText: {
-    textAlign: 'center',
-    color: '#000',
-    fontWeight: 'bold',
-  },
-  link: {
-    color: '#ff8a00',
-    textAlign: 'center',
-    marginTop: 15,
-  },
+  container: { flex: 1, justifyContent: 'center', padding: 20 },
+  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
+  input: { borderWidth: 1, marginBottom: 10, padding: 10, borderRadius: 5 },
+  btn: { backgroundColor: '#ff8a00', padding: 12, borderRadius: 5 },
+  btnText: { color: '#fff', textAlign: 'center' },
 });

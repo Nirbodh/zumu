@@ -19,13 +19,15 @@ const HomeScreen = () => {
   // ✅ নতুন স্টেট: API থেকে ম্যাচ
   const [matches, setMatches] = useState([]);
 
-  useEffect(() => {
-    // Render Backend থেকে ডাটা ফেচ
-    fetch('https://zumu.onrender.com/api/matches')
-      .then(res => res.json())
-      .then(data => setMatches(data))
-      .catch(err => console.error('Fetch error:', err));
-  }, []);
+ useEffect(() => {
+  fetch('https://zumu.onrender.com/api/matches')
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then(data => setMatches(data))
+    .catch(err => console.error('Fetch error:', err));
+}, []);
 
   return (
     <View style={styles.container}>

@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const multer = require('multer');
-const { v2 as cloudinary } = require('cloudinary');
+const cloudinary = require('cloudinary').v2; // ✅ Fixed import
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const authRoutes = require('./routes/auth');

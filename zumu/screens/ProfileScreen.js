@@ -1,9 +1,21 @@
+// screens/ProfileScreen.js
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Header from '../components/Header';
 import StatusBar from '../components/StatusBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }) => {
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('userToken');
+      console.log('🚪 Logged out, token removed');
+      navigation.replace('Login');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to logout');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
@@ -58,7 +70,7 @@ const ProfileScreen = () => {
           <TouchableOpacity style={styles.primaryButton}>
             <Text style={styles.buttonText}>Edit Profile</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={handleLogout}>
             <Text style={styles.secondaryButtonText}>Logout</Text>
           </TouchableOpacity>
         </View>

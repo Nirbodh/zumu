@@ -1,64 +1,135 @@
-// location: project1/backend/routes/admin.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Match = require('../models/Match');
-const User = require('../models/User');
-const mongoose = require('mongoose');
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
-// POST /api/admin/match/:id/result
-// body: { results: [{ participantId, kills, rank }] }
-router.post('/match/:id/result', async (req, res) => {
+const User = require("../models/User");
+const Match = require("../models/Match");
+
+// Middleware (only admins allowed)
+const { adminMiddleware } = require("../middleware/auth");
+
+// ==================================================
+// 🔑 Admin Login
+// ==================================================
+router.post("/login", async (req, res) => {
   try {
-    const matchId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(matchId)) return res.status(400).json({ error: 'Invalid match id' });
+    const { email, password } = req.body;
 
-    const { results } = req.body;
-    const match = await Match.findById(matchId);
-    if (!match) return res.status(404).json({ error: 'Match not found' });
+    const user = await User.findOne({ email, role: "admin" });
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-    // Update participants with kills & rank
-    for (const r of results) {
-      const p = match.participants.id(r.participantId);
-      if (p) {
-        p.kills = Number(r.kills || 0);
-        p.rank = Number(r.rank || 0);
-      }
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
-    // Sort participants by rank ascending (1 is top)
-    const participants = match.participants.map(p => p.toObject());
-    participants.sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
+    const token = jwt.sign(
+      { userId: user._id, role: "admin" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    // Prize distribution logic (example)
-    const prizeDistribution = [];
-    if (participants.length > 0) {
-      // 1st 50%, 2nd 30%, 3rd 20% of totalPrize + kills*perKill
-      const total = Number(match.totalPrize || 0);
-      const perKill = Number(match.perKill || 0);
-
-      const percentages = [0.5, 0.3, 0.2];
-      for (let i = 0; i < Math.min(3, participants.length); i++) {
-        const base = total * percentages[i];
-        const killBonus = (participants[i].kills || 0) * perKill;
-        const amount = Math.round(base + killBonus);
-        prizeDistribution.push({ userId: participants[i].userId, amount });
-      }
-    }
-
-    // Credit users
-    for (const pd of prizeDistribution) {
-      await User.findByIdAndUpdate(pd.userId, {
-        $inc: { walletBalance: pd.amount, totalWinnings: pd.amount }
-      });
-    }
-
-    match.status = 'completed';
-    await match.save();
-
-    res.json({ success: true, prizeDistribution });
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to submit results' });
+    console.error("Admin login error:", err);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// ==================================================
+// 🎮 Match Management (Admin Only)
+// ==================================================
+
+// Create match
+router.post("/matches", adminMiddleware, async (req, res) => {
+  try {
+    const match = new Match(req.body);
+    await match.save();
+    res.json(match);
+  } catch (err) {
+    console.error("Create match error:", err);
+    res.status(500).json({ error: "Failed to create match" });
+  }
+});
+
+// Update match
+router.put("/matches/:id", adminMiddleware, async (req, res) => {
+  try {
+    const match = await Match.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!match) return res.status(404).json({ error: "Match not found" });
+    res.json(match);
+  } catch (err) {
+    console.error("Update match error:", err);
+    res.status(500).json({ error: "Failed to update match" });
+  }
+});
+
+// Delete match
+router.delete("/matches/:id", adminMiddleware, async (req, res) => {
+  try {
+    const match = await Match.findByIdAndDelete(req.params.id);
+    if (!match) return res.status(404).json({ error: "Match not found" });
+    res.json({ message: "Match deleted successfully" });
+  } catch (err) {
+    console.error("Delete match error:", err);
+    res.status(500).json({ error: "Failed to delete match" });
+  }
+});
+
+// Get all matches
+router.get("/matches", adminMiddleware, async (req, res) => {
+  try {
+    const matches = await Match.find();
+    res.json(matches);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch matches" });
+  }
+});
+
+// ==================================================
+// 👥 User Management (Admin Only)
+// ==================================================
+
+// Get all users
+router.get("/users", adminMiddleware, async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// Update user wallet / info
+router.put("/users/:id", adminMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    }).select("-password");
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
+// Delete user
+router.delete("/users/:id", adminMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete user" });
   }
 });
 

@@ -1,48 +1,65 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+// screens/RegisterScreen.js
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { api } from "../utils/api";
 
-const API = 'https://zumu.onrender.com';
+const RegisterScreen = ({ navigation }) => {
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-export default function RegisterScreen({ navigation }) {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-
-  const register = async () => {
+  const handleRegister = async () => {
     try {
-      const res = await fetch(`${API}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, phone, password }),
+      await api("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ username, email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Registration failed');
-      Alert.alert('Success', 'Account created. Please login.');
-      navigation.replace('Login');
+
+      Alert.alert("✅ Success", "Registration successful! Please login.");
+      navigation.replace("Login"); // 🔑 Register শেষে Login এ পাঠাবে
     } catch (err) {
-      Alert.alert('Error', err.message);
+      Alert.alert("❌ Register Failed", err.message);
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
-      <TextInput placeholder="Username" value={username} onChangeText={setUsername} style={styles.input} />
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} />
-      <TextInput placeholder="Phone" value={phone} onChangeText={setPhone} style={styles.input} />
-      <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={styles.input} secureTextEntry />
-      <TouchableOpacity style={styles.btn} onPress={register}>
-        <Text style={styles.btnText}>Register</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Username"
+        placeholderTextColor="#aaa"
+        value={username}
+        onChangeText={setUsername}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#aaa"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        placeholderTextColor="#aaa"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+      <TouchableOpacity style={styles.button} onPress={handleRegister}>
+        <Text style={styles.buttonText}>Register</Text>
       </TouchableOpacity>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
-  input: { borderWidth: 1, marginBottom: 10, padding: 10, borderRadius: 5 },
-  btn: { backgroundColor: '#ff8a00', padding: 12, borderRadius: 5 },
-  btnText: { color: '#fff', textAlign: 'center' },
+  container: { flex: 1, backgroundColor: "#0a0c23", justifyContent: "center", padding: 20 },
+  title: { fontSize: 24, fontWeight: "bold", color: "#fff", marginBottom: 20, textAlign: "center" },
+  input: { backgroundColor: "#1c1e3c", color: "#fff", padding: 12, borderRadius: 8, marginBottom: 15 },
+  button: { backgroundColor: "#ff8a00", padding: 15, borderRadius: 8 },
+  buttonText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
 });
+
+export default RegisterScreen;

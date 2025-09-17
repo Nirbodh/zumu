@@ -1,82 +1,55 @@
-// location: project1/backend/routes/matches.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Match = require('../models/Match');
-const User = require('../models/User');
-const authenticateToken = require('../middleware/auth');
-const mongoose = require('mongoose');
+const Match = require("../models/Match");
+const { authenticateToken } = require("../middleware/auth"); // Changed from authenticateToken to authenticateToken
 
-// GET all matches
-router.get('/', async (req, res) => {
+// ✅ Get all matches
+router.get("/", async (req, res) => {
   try {
-    const matches = await Match.find().sort({ startTime: 1 }).lean();
+    const matches = await Match.find().populate("participants.userId", "username");
     res.json(matches);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch matches' });
+    res.status(500).json({ error: "Failed to fetch matches" });
   }
 });
 
-// GET single match
-router.get('/:id', async (req, res) => {
+// ✅ Join a match
+router.post("/:id/join", authenticateToken, async (req, res) => {
   try {
-    const match = await Match.findById(req.params.id).populate('participants.userId', 'username email');
-    if (!match) return res.status(404).json({ error: 'Match not found' });
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ error: "Match not found" });
+
+    const already = match.participants.some(
+      (p) => p.userId.toString() === req.user._id.toString()
+    );
+    if (already) return res.status(400).json({ error: "Already joined" });
+
+    match.participants.push({ userId: req.user._id });
+    await match.save();
+
+    res.json({ message: "Joined successfully", match });
+  } catch (err) {
+    res.status(500).json({ error: "Join failed" });
+  }
+});
+
+// ✅ Match details (roomCode only if joined)
+router.get("/:id", authenticateToken, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id).lean();
+    if (!match) return res.status(404).json({ error: "Match not found" });
+
+    const isJoined = match.participants.some(
+      (p) => p.userId.toString() === req.user._id.toString()
+    );
+    if (!isJoined) {
+      delete match.roomCode;
+      delete match.roomPassword;
+    }
+
     res.json(match);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch match' });
-  }
-});
-
-// Create match (admin) - for now open; in production protect with admin check
-router.post('/', async (req, res) => {
-  try {
-    const data = req.body;
-    const match = new Match(data);
-    await match.save();
-    res.status(201).json({ success: true, match });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to create match' });
-  }
-});
-
-// Join match (authenticated)
-router.post('/:id/join', authenticateToken, async (req, res) => {
-  try {
-    const matchId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(matchId)) return res.status(400).json({ error: 'Invalid match id' });
-
-    const match = await Match.findById(matchId);
-    if (!match) return res.status(404).json({ error: 'Match not found' });
-
-    const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    // Check already joined
-    const already = match.participants.some(p => p.userId.toString() === user._id.toString());
-    if (already) return res.status(400).json({ error: 'Already joined' });
-
-    // Check capacity
-    if (match.currentParticipants >= match.maxParticipants) return res.status(400).json({ error: 'Match full' });
-
-    // Check balance
-    if (user.walletBalance < match.entryFee) return res.status(400).json({ error: 'Insufficient balance' });
-
-    // Deduct entry fee
-    user.walletBalance -= match.entryFee;
-    await user.save();
-
-    // Save participant
-    match.participants.push({ userId: user._id, playerId: req.body.playerId || '' });
-    match.currentParticipants += 1;
-    await match.save();
-
-    res.json({ success: true, match });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to join match' });
+    res.status(500).json({ error: "Failed to load match" });
   }
 });
 

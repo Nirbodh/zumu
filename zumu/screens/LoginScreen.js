@@ -1,49 +1,66 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// screens/LoginScreen.js
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "../utils/api";
 
-const API = 'https://zumu.onrender.com'; // Render backend URL
+const LoginScreen = ({ navigation }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const login = async () => {
+  const handleLogin = async () => {
     try {
-      const res = await fetch(`${API}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const data = await api("/auth/login", {
+        method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
-      await AsyncStorage.setItem('userToken', data.token);
-      navigation.replace('Main');
+
+      await AsyncStorage.setItem("userToken", data.token);
+      await AsyncStorage.setItem("userData", JSON.stringify(data.user));
+
+      Alert.alert("✅ Success", "Login successful!");
+      navigation.replace("Main"); // 🔑 তোমার App.js এ Main আছে, Home এখানে nested
     } catch (err) {
-      Alert.alert('Error', err.message);
+      Alert.alert("❌ Login Failed", err.message);
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} />
-      <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={styles.input} secureTextEntry />
-      <TouchableOpacity style={styles.btn} onPress={login}>
-        <Text style={styles.btnText}>Login</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#aaa"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        placeholderTextColor="#aaa"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
-      <Text onPress={() => navigation.navigate('Register')} style={styles.link}>
-        No account? Register
-      </Text>
+
+      <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+        <Text style={styles.link}>Don't have an account? Register</Text>
+      </TouchableOpacity>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
-  input: { borderWidth: 1, marginBottom: 10, padding: 10, borderRadius: 5 },
-  btn: { backgroundColor: '#ff8a00', padding: 12, borderRadius: 5 },
-  btnText: { color: '#fff', textAlign: 'center' },
-  link: { color: '#007bff', marginTop: 15, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: "#0a0c23", justifyContent: "center", padding: 20 },
+  title: { fontSize: 24, fontWeight: "bold", color: "#fff", marginBottom: 20, textAlign: "center" },
+  input: { backgroundColor: "#1c1e3c", color: "#fff", padding: 12, borderRadius: 8, marginBottom: 15 },
+  button: { backgroundColor: "#ff8a00", padding: 15, borderRadius: 8 },
+  buttonText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
+  link: { marginTop: 15, color: "#ff8a00", textAlign: "center" },
 });
+
+export default LoginScreen;

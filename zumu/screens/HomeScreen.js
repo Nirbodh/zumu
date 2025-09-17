@@ -1,54 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import Header from '../components/Header';
-import StatusBar from '../components/StatusBar';
-import GameSelection from '../components/GameSelection';
-import MatchList from '../components/MatchList';
-import ParticipantsTable from '../components/ParticipantsTable';
+// screens/HomeScreen.js
+import React, { useState, useEffect } from "react";
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import Header from "../components/Header";
+import StatusBar from "../components/StatusBar";
+import GameSelection from "../components/GameSelection";
+import MatchList from "../components/MatchList";
+import ParticipantsTable from "../components/ParticipantsTable";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "../utils/api";
 
 const HomeScreen = () => {
-  const [currentGame, setCurrentGame] = useState('pubg');
-  const [currentMatchTab, setCurrentMatchTab] = useState('upcoming');
-
-  // ✅ নতুন স্টেট: API থেকে ম্যাচ
+  const [currentGame, setCurrentGame] = useState("pubg");
+  const [currentMatchTab, setCurrentMatchTab] = useState("upcoming");
   const [matches, setMatches] = useState([]);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
- useEffect(() => {
-  fetch('https://zumu.onrender.com/api/matches')
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .then(data => setMatches(data))
-    .catch(err => console.error('Fetch error:', err));
-}, []);
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [currentMatchTab, currentGame]);
+
+  const loadUser = async () => {
+    try {
+      const userData = await AsyncStorage.getItem("userData");
+      if (userData) setUser(JSON.parse(userData));
+    } catch (err) {
+      console.error("User load error:", err);
+    }
+  };
+
+  const fetchMatches = async () => {
+    try {
+      setLoading(true);
+      const allMatches = await api("/matches");
+      const filtered = allMatches.filter(
+        (m) => m.status === currentMatchTab && (currentGame === "all" || m.game === currentGame)
+      );
+      setMatches(filtered);
+    } catch (err) {
+      Alert.alert("Error", "Failed to load matches");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const joinMatch = async (matchId) => {
+    try {
+      await api(`/matches/${matchId}/join`, { method: "POST" });
+      Alert.alert("✅ Success", "You have joined the match!");
+      fetchMatches();
+    } catch (err) {
+      Alert.alert("❌ Error", err.message);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <Header title="zumu" subtitle="Gaming Tournament Platform" />
-        <StatusBar username="ovimahathirmohammad" balance={500} />
+        <StatusBar username={user?.username || "Guest"} balance={user?.walletBalance || 0} />
 
-        {/* Tabs */}
         <View style={styles.navTabs}>
-          {['upcoming','live','completed'].map(tab => (
+          {["upcoming", "live", "completed"].map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[styles.navTab, currentMatchTab === tab && styles.navTabActive]}
               onPress={() => setCurrentMatchTab(tab)}
             >
-              <Text
-                style={[
-                  styles.navTabText,
-                  currentMatchTab === tab && styles.navTabTextActive,
-                ]}
-              >
+              <Text style={[styles.navTabText, currentMatchTab === tab && styles.navTabTextActive]}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -57,34 +80,38 @@ const HomeScreen = () => {
 
         <GameSelection currentGame={currentGame} onGameSelect={setCurrentGame} />
 
-        {/* ✅ API থেকে পাওয়া ম্যাচ ডাটা পাঠাচ্ছি */}
-        <MatchList matches={matches} />
-
-        <ParticipantsTable />
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#ff8a00" />
+            <Text style={styles.loadingText}>Loading matches...</Text>
+          </View>
+        ) : (
+          <>
+            <MatchList matches={matches} onJoin={joinMatch} currentUserId={user?._id} />
+            <ParticipantsTable />
+          </>
+        )}
       </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0c23' },
+  container: { flex: 1, backgroundColor: "#0a0c23" },
   scrollView: { flex: 1, padding: 15 },
   navTabs: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 10,
     padding: 5,
     marginBottom: 15,
   },
-  navTab: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  navTabActive: { backgroundColor: '#ff8a00' },
-  navTabText: { color: '#ccc', fontWeight: 'bold' },
-  navTabTextActive: { color: '#fff' },
+  navTab: { flex: 1, padding: 10, borderRadius: 8, alignItems: "center" },
+  navTabActive: { backgroundColor: "#ff8a00" },
+  navTabText: { color: "#ccc", fontWeight: "bold" },
+  navTabTextActive: { color: "#fff" },
+  loadingContainer: { padding: 40, alignItems: "center", justifyContent: "center" },
+  loadingText: { color: "#ccc", marginTop: 10 },
 });
 
 export default HomeScreen;

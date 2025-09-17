@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API = "https://zumu.onrender.com";
+const API = "https://zumu.onrender.com"; // তোমার backend URL বসাও
 
-export default function MatchManagement() {
+const MatchManagement = () => {
   const [matches, setMatches] = useState([]);
   const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
   const [entryFee, setEntryFee] = useState("");
+  const [prizePool, setPrizePool] = useState("");
+  const [roomCode, setRoomCode] = useState("");
+  const [roomPassword, setRoomPassword] = useState("");
 
   useEffect(() => {
     fetchMatches();
@@ -14,35 +19,41 @@ export default function MatchManagement() {
 
   const fetchMatches = async () => {
     try {
-      const res = await fetch(`${API}/api/matches`);
+      const token = await AsyncStorage.getItem("adminToken");
+      const res = await fetch(`${API}/api/admin/matches`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       setMatches(data);
     } catch (err) {
-      Alert.alert("Error", "Failed to load matches");
+      console.error("Fetch matches error:", err);
     }
   };
 
   const createMatch = async () => {
     try {
+      const token = await AsyncStorage.getItem("adminToken");
       const res = await fetch(`${API}/api/admin/matches`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, entryFee }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          game: "freefire",
+          title,
+          date,
+          entryFee: Number(entryFee),
+          prizePool: Number(prizePool),
+          roomCode,
+          roomPassword,
+        }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create match");
-      Alert.alert("✅ Success", "Match created");
-      fetchMatches();
-    } catch (err) {
-      Alert.alert("Error", err.message);
-    }
-  };
 
-  const deleteMatch = async (id) => {
-    try {
-      const res = await fetch(`${API}/api/admin/matches/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete match");
+      Alert.alert("✅ Match created");
       fetchMatches();
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -51,37 +62,36 @@ export default function MatchManagement() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🎮 Match Management</Text>
+      <Text style={styles.heading}>➕ Create Free Fire Match</Text>
 
-      <TextInput style={styles.input} placeholder="Match Title" value={title} onChangeText={setTitle} />
-      <TextInput style={styles.input} placeholder="Entry Fee" value={entryFee} onChangeText={setEntryFee} keyboardType="numeric" />
+      <TextInput placeholder="Title" value={title} onChangeText={setTitle} style={styles.input} />
+      <TextInput placeholder="Date (YYYY-MM-DD HH:mm)" value={date} onChangeText={setDate} style={styles.input} />
+      <TextInput placeholder="Entry Fee" value={entryFee} onChangeText={setEntryFee} style={styles.input} keyboardType="numeric" />
+      <TextInput placeholder="Prize Pool" value={prizePool} onChangeText={setPrizePool} style={styles.input} keyboardType="numeric" />
+      <TextInput placeholder="Room Code" value={roomCode} onChangeText={setRoomCode} style={styles.input} />
+      <TextInput placeholder="Room Password" value={roomPassword} onChangeText={setRoomPassword} style={styles.input} />
 
-      <TouchableOpacity style={styles.button} onPress={createMatch}>
-        <Text style={styles.buttonText}>Create Match</Text>
-      </TouchableOpacity>
+      <Button title="Create Match" onPress={createMatch} />
 
+      <Text style={styles.heading}>📋 Matches</Text>
       <FlatList
         data={matches}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <View style={styles.matchItem}>
-            <Text style={styles.text}>{item.title} - 💰 {item.entryFee}</Text>
-            <TouchableOpacity onPress={() => deleteMatch(item._id)}>
-              <Text style={{ color: "red" }}>Delete</Text>
-            </TouchableOpacity>
+            <Text>{item.title} - {item.status}</Text>
           </View>
         )}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0c23", padding: 15 },
-  title: { fontSize: 22, fontWeight: "bold", color: "#fff", marginBottom: 20 },
-  input: { backgroundColor: "#fff", padding: 10, borderRadius: 5, marginBottom: 10 },
-  button: { backgroundColor: "#ff8a00", padding: 12, borderRadius: 5, alignItems: "center", marginBottom: 15 },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-  matchItem: { flexDirection: "row", justifyContent: "space-between", padding: 10, backgroundColor: "#1a1a2e", marginBottom: 5, borderRadius: 5 },
-  text: { color: "#fff" },
+  container: { flex: 1, padding: 20, backgroundColor: "#0a0c23" },
+  heading: { color: "#fff", fontSize: 18, fontWeight: "bold", marginVertical: 10 },
+  input: { backgroundColor: "#fff", padding: 10, marginVertical: 5, borderRadius: 5 },
+  matchItem: { padding: 10, backgroundColor: "#222", marginVertical: 5, borderRadius: 5 },
 });
+
+export default MatchManagement;

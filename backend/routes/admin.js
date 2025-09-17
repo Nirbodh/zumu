@@ -1,21 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Match = require("../models/Match");
-
-// Middleware (only admins allowed)
+const Transaction = require("../models/Transaction");
 const { adminMiddleware } = require("../middleware/auth");
 
-// ==================================================
-// 🔑 Admin Login
-// ==================================================
+// ✅ Admin Login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email, role: "admin" });
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
@@ -43,14 +38,31 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ==================================================
-// 🎮 Match Management (Admin Only)
-// ==================================================
 
-// Create match
+// ✅ Get All Matches
+router.get("/matches", adminMiddleware, async (req, res) => {
+  try {
+    const matches = await Match.find().sort({ createdAt: -1 });
+    res.json(matches);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load matches" });
+  }
+});
+
+// ✅ Create Match
 router.post("/matches", adminMiddleware, async (req, res) => {
   try {
-    const match = new Match(req.body);
+    const { game, title, date, entryFee, prizePool, roomCode, roomPassword } = req.body;
+    const match = new Match({
+      game,
+      title,
+      date,
+      entryFee,
+      prizePool,
+      roomCode,
+      roomPassword,
+      status: "upcoming",
+    });
     await match.save();
     res.json(match);
   } catch (err) {
@@ -59,77 +71,74 @@ router.post("/matches", adminMiddleware, async (req, res) => {
   }
 });
 
-// Update match
-router.put("/matches/:id", adminMiddleware, async (req, res) => {
+// ✅ Submit Result
+router.post("/matches/:id/result", adminMiddleware, async (req, res) => {
   try {
-    const match = await Match.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const { winnerId } = req.body;
+    const match = await Match.findById(req.params.id);
     if (!match) return res.status(404).json({ error: "Match not found" });
-    res.json(match);
+
+    match.winner = winnerId;
+    match.status = "completed";
+    await match.save();
+
+    res.json({ message: "Result submitted", match });
   } catch (err) {
-    console.error("Update match error:", err);
-    res.status(500).json({ error: "Failed to update match" });
+    res.status(500).json({ error: "Failed to submit result" });
   }
 });
 
-// Delete match
-router.delete("/matches/:id", adminMiddleware, async (req, res) => {
-  try {
-    const match = await Match.findByIdAndDelete(req.params.id);
-    if (!match) return res.status(404).json({ error: "Match not found" });
-    res.json({ message: "Match deleted successfully" });
-  } catch (err) {
-    console.error("Delete match error:", err);
-    res.status(500).json({ error: "Failed to delete match" });
-  }
-});
-
-// Get all matches
-router.get("/matches", adminMiddleware, async (req, res) => {
-  try {
-    const matches = await Match.find();
-    res.json(matches);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch matches" });
-  }
-});
-
-// ==================================================
-// 👥 User Management (Admin Only)
-// ==================================================
-
-// Get all users
+// ✅ Get Users
 router.get("/users", adminMiddleware, async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await User.find({ role: "user" }).sort({ createdAt: -1 });
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch users" });
+    res.status(500).json({ error: "Failed to load users" });
   }
 });
 
-// Update user wallet / info
-router.put("/users/:id", adminMiddleware, async (req, res) => {
+// ✅ Suspend User
+router.post("/users/:id/suspend", adminMiddleware, async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    }).select("-password");
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
+
+    user.isSuspended = true;
+    await user.save();
+
+    res.json({ message: "User suspended" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to update user" });
+    res.status(500).json({ error: "Failed to suspend user" });
   }
 });
 
-// Delete user
-router.delete("/users/:id", adminMiddleware, async (req, res) => {
+// ✅ Get Transactions
+router.get("/transactions", adminMiddleware, async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ message: "User deleted successfully" });
+    const txns = await Transaction.find().populate("user").sort({ createdAt: -1 });
+    res.json(txns);
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete user" });
+    res.status(500).json({ error: "Failed to load transactions" });
+  }
+});
+
+// ✅ Approve Transaction
+router.post("/transactions/:id/approve", adminMiddleware, async (req, res) => {
+  try {
+    const txn = await Transaction.findById(req.params.id).populate("user");
+    if (!txn) return res.status(404).json({ error: "Transaction not found" });
+
+    txn.status = "approved";
+    await txn.save();
+
+    // Update user balance
+    txn.user.walletBalance += txn.amount;
+    await txn.user.save();
+
+    res.json({ message: "Transaction approved", txn });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to approve transaction" });
   }
 });
 

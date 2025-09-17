@@ -1,3 +1,4 @@
+// screens/AdminLogin.js
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -23,7 +24,6 @@ const AdminLogin = ({ navigation, setUser }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      // Check if response is JSON
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const text = await res.text();
@@ -44,7 +44,7 @@ const AdminLogin = ({ navigation, setUser }) => {
       setUser(userData);
 
       Alert.alert("✅ Success", "Welcome Admin!");
-      navigation.replace("AdminPanel");
+      navigation.replace("Dashboard"); // ✅ Screen name ঠিক করা হলো
 
     } catch (err) {
       console.error("Login error:", err);

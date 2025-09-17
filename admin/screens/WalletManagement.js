@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, Button, FlatList, Alert, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API = "https://zumu.onrender.com";
 
-export default function WalletManagement() {
+const WalletManagement = () => {
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
@@ -12,20 +13,29 @@ export default function WalletManagement() {
 
   const fetchTransactions = async () => {
     try {
-      const res = await fetch(`${API}/api/admin/transactions`);
+      const token = await AsyncStorage.getItem("adminToken");
+      const res = await fetch(`${API}/api/admin/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       setTransactions(data);
     } catch (err) {
-      Alert.alert("Error", "Failed to load transactions");
+      console.error("Fetch transactions error:", err);
     }
   };
 
-  const approveTransaction = async (id) => {
+  const approveTransaction = async (txnId) => {
     try {
-      const res = await fetch(`${API}/api/admin/transactions/${id}/approve`, { method: "PATCH" });
+      const token = await AsyncStorage.getItem("adminToken");
+      const res = await fetch(`${API}/api/admin/transactions/${txnId}/approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to approve");
-      Alert.alert("✅ Success", "Transaction approved");
+      if (!res.ok) throw new Error(data.error || "Failed to approve transaction");
+
+      Alert.alert("💰 Transaction approved");
       fetchTransactions();
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -34,26 +44,27 @@ export default function WalletManagement() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>💰 Wallet Management</Text>
+      <Text style={styles.heading}>💳 Wallet Management</Text>
       <FlatList
         data={transactions}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text style={styles.text}>{item.user?.username} → {item.amount} ({item.type})</Text>
-            <TouchableOpacity onPress={() => approveTransaction(item._id)}>
-              <Text style={{ color: "lime" }}>Approve</Text>
-            </TouchableOpacity>
+          <View style={styles.txnItem}>
+            <Text style={{ color: "#fff" }}>{item.user?.username} → {item.amount} ({item.status})</Text>
+            {item.status === "pending" && (
+              <Button title="Approve" onPress={() => approveTransaction(item._id)} />
+            )}
           </View>
         )}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0c23", padding: 15 },
-  title: { fontSize: 22, fontWeight: "bold", color: "#fff", marginBottom: 20 },
-  item: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#1a1a2e", padding: 10, marginBottom: 5, borderRadius: 5 },
-  text: { color: "#fff" },
+  container: { flex: 1, padding: 20, backgroundColor: "#0a0c23" },
+  heading: { color: "#fff", fontSize: 18, fontWeight: "bold", marginVertical: 10 },
+  txnItem: { flexDirection: "row", justifyContent: "space-between", padding: 10, backgroundColor: "#222", marginVertical: 5, borderRadius: 5 },
 });
+
+export default WalletManagement;

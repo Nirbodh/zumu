@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, Button, FlatList, Alert, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API = "https://zumu.onrender.com";
 
-export default function UserManagement() {
+const UserManagement = () => {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
@@ -12,20 +13,29 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${API}/api/admin/users`);
+      const token = await AsyncStorage.getItem("adminToken");
+      const res = await fetch(`${API}/api/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       setUsers(data);
     } catch (err) {
-      Alert.alert("Error", "Failed to load users");
+      console.error("Fetch users error:", err);
     }
   };
 
-  const suspendUser = async (id) => {
+  const suspendUser = async (userId) => {
     try {
-      const res = await fetch(`${API}/api/admin/users/${id}/suspend`, { method: "PATCH" });
+      const token = await AsyncStorage.getItem("adminToken");
+      const res = await fetch(`${API}/api/admin/users/${userId}/suspend`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to suspend user");
-      Alert.alert("✅ Success", "User suspended");
+
+      Alert.alert("🚫 User suspended");
       fetchUsers();
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -34,26 +44,25 @@ export default function UserManagement() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>👥 User Management</Text>
+      <Text style={styles.heading}>👥 User Management</Text>
       <FlatList
         data={users}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <View style={styles.userItem}>
-            <Text style={styles.text}>{item.username} ({item.email})</Text>
-            <TouchableOpacity onPress={() => suspendUser(item._id)}>
-              <Text style={{ color: "red" }}>Suspend</Text>
-            </TouchableOpacity>
+            <Text style={{ color: "#fff" }}>{item.username} - {item.email}</Text>
+            <Button title="Suspend" onPress={() => suspendUser(item._id)} />
           </View>
         )}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0c23", padding: 15 },
-  title: { fontSize: 22, fontWeight: "bold", color: "#fff", marginBottom: 20 },
-  userItem: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#1a1a2e", padding: 10, marginBottom: 5, borderRadius: 5 },
-  text: { color: "#fff" },
+  container: { flex: 1, padding: 20, backgroundColor: "#0a0c23" },
+  heading: { color: "#fff", fontSize: 18, fontWeight: "bold", marginVertical: 10 },
+  userItem: { flexDirection: "row", justifyContent: "space-between", padding: 10, backgroundColor: "#222", marginVertical: 5, borderRadius: 5 },
 });
+
+export default UserManagement;

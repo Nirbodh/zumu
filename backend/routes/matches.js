@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Match = require("../models/Match");
-const authMiddleware = require("../middleware/auth"); // Make sure this path is correct
+const authMiddleware = require("../middleware/auth"); // Changed from authenticateToken to authMiddleware
 
 // ✅ Get all matches
 router.get("/", async (req, res) => {

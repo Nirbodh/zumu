@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
-const { authenticateToken } = require("../middleware/auth"); // Changed from authMiddleware to authenticateToken
+const authMiddleware = require("../middleware/auth"); // Changed from authenticateToken to authMiddleware
 
 // ✅ Get profile
-router.get("/me", authenticateToken, async (req, res) => {
+router.get("/me", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password");
     res.json(user);
@@ -14,7 +14,7 @@ router.get("/me", authenticateToken, async (req, res) => {
 });
 
 // ✅ Update wallet (example)
-router.post("/wallet/add", authenticateToken, async (req, res) => {
+router.post("/wallet/add", authMiddleware, async (req, res) => {
   try {
     const { amount } = req.body;
     const user = await User.findById(req.user._id);

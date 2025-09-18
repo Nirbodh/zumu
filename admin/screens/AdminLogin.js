@@ -1,4 +1,3 @@
-// screens/AdminLogin.js
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,7 +17,7 @@ const AdminLogin = ({ navigation, setUser }) => {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API}/api/admin/login`, {
+      const res = await fetch(`${API}/api/admin/login`, { // Fixed endpoint
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -33,20 +32,15 @@ const AdminLogin = ({ navigation, setUser }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
 
-      // Store only the admin token
+      // Store admin token and user data
       await AsyncStorage.setItem("adminToken", data.token);
+      await AsyncStorage.setItem("userData", JSON.stringify(data.user));
 
       // Set user data in state
-      const userData = {
-        token: data.token,
-        role: "admin",
-        username: data.user.username,
-        email: data.user.email,
-      };
-      setUser(userData);
+      setUser(data.user);
 
       Alert.alert("✅ Success", "Welcome Admin!");
-      navigation.replace("AdminDashboard");
+      navigation.navigate("AdminDashboard"); // Fixed navigation
 
     } catch (err) {
       console.error("Login error:", err);

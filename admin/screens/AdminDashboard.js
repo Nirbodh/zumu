@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Alert, Button, ScrollView } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AdminHeader from "../components/AdminHeader";
-import AdminSidebar from "../components/AdminSidebar";
 
 const API = "https://zumu.onrender.com";
 
 export default function AdminDashboard({ navigation }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -29,33 +26,16 @@ export default function AdminDashboard({ navigation }) {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Check if response is JSON
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await res.text();
+      if (!res.ok) {
         throw new Error(`Server returned ${res.status} ${res.statusText}`);
       }
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load stats");
-      
       setStats(data);
       setError(null);
     } catch (err) {
       console.error("Stats Error:", err);
       setError(err.message);
-      
-      // Try the test endpoint to see if admin routes are working at all
-      try {
-        const token = await AsyncStorage.getItem("adminToken");
-        const testRes = await fetch(`${API}/api/admin/test`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const testData = await testRes.json();
-        console.log("Test endpoint response:", testData);
-      } catch (testErr) {
-        console.error("Test endpoint error:", testErr);
-      }
     } finally {
       setLoading(false);
     }
@@ -63,6 +43,7 @@ export default function AdminDashboard({ navigation }) {
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("adminToken");
+    await AsyncStorage.removeItem("userData");
     navigation.replace("AdminLogin");
   };
 
@@ -76,23 +57,6 @@ export default function AdminDashboard({ navigation }) {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Header */}
-      <AdminHeader
-        title="Admin Dashboard"
-        onLogout={handleLogout}
-        onMenuPress={() => setSidebarVisible(true)}
-      />
-
-      {/* Sidebar */}
-      <AdminSidebar
-        isVisible={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
-        onNavigate={(screen) => {
-          setSidebarVisible(false);
-          navigation.navigate(screen);
-        }}
-      />
-
       {/* Content */}
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>📊 Admin Dashboard</Text>
@@ -117,6 +81,7 @@ export default function AdminDashboard({ navigation }) {
           <Button title="👥 User Management" onPress={() => navigation.navigate("Users")} />
           <Button title="🏆 Result Management" onPress={() => navigation.navigate("Results")} />
           <Button title="💳 Wallet Management" onPress={() => navigation.navigate("Wallet")} />
+          <Button title="🚪 Logout" onPress={handleLogout} color="red" />
         </View>
       </ScrollView>
     </View>

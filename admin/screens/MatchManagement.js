@@ -7,11 +7,11 @@ const API = "https://zumu.onrender.com";
 const MatchManagement = () => {
   const [matches, setMatches] = useState([]);
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
   const [entryFee, setEntryFee] = useState("");
   const [prizePool, setPrizePool] = useState("");
+  const [perKill, setPerKill] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const [roomPassword, setRoomPassword] = useState("");
 
   useEffect(() => {
     fetchMatches();
@@ -23,10 +23,14 @@ const MatchManagement = () => {
       const res = await fetch(`${API}/api/admin/matches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      if (!res.ok) throw new Error("Failed to fetch matches");
+      
       const data = await res.json();
       setMatches(data);
     } catch (err) {
       console.error("Fetch matches error:", err);
+      Alert.alert("Error", "Failed to fetch matches");
     }
   };
 
@@ -40,13 +44,12 @@ const MatchManagement = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          game: "freefire",
           title,
-          date,
           entryFee: Number(entryFee),
-          prizePool: Number(prizePool),
+          totalPrize: Number(prizePool),
+          perKill: Number(perKill),
+          maxParticipants: Number(maxParticipants) || 100,
           roomCode,
-          roomPassword,
         }),
       });
 
@@ -54,6 +57,15 @@ const MatchManagement = () => {
       if (!res.ok) throw new Error(data.error || "Failed to create match");
 
       Alert.alert("✅ Match created");
+      // Reset form
+      setTitle("");
+      setEntryFee("");
+      setPrizePool("");
+      setPerKill("");
+      setMaxParticipants("");
+      setRoomCode("");
+      
+      // Refresh matches list
       fetchMatches();
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -65,11 +77,11 @@ const MatchManagement = () => {
       <Text style={styles.heading}>➕ Create Free Fire Match</Text>
 
       <TextInput placeholder="Title" value={title} onChangeText={setTitle} style={styles.input} />
-      <TextInput placeholder="Date (YYYY-MM-DD HH:mm)" value={date} onChangeText={setDate} style={styles.input} />
       <TextInput placeholder="Entry Fee" value={entryFee} onChangeText={setEntryFee} style={styles.input} keyboardType="numeric" />
       <TextInput placeholder="Prize Pool" value={prizePool} onChangeText={setPrizePool} style={styles.input} keyboardType="numeric" />
+      <TextInput placeholder="Per Kill Prize" value={perKill} onChangeText={setPerKill} style={styles.input} keyboardType="numeric" />
+      <TextInput placeholder="Max Participants" value={maxParticipants} onChangeText={setMaxParticipants} style={styles.input} keyboardType="numeric" />
       <TextInput placeholder="Room Code" value={roomCode} onChangeText={setRoomCode} style={styles.input} />
-      <TextInput placeholder="Room Password" value={roomPassword} onChangeText={setRoomPassword} style={styles.input} />
 
       <Button title="Create Match" onPress={createMatch} />
 
@@ -79,7 +91,8 @@ const MatchManagement = () => {
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <View style={styles.matchItem}>
-            <Text>{item.title} - {item.status}</Text>
+            <Text style={styles.matchText}>{item.title} - {item.status}</Text>
+            <Text style={styles.matchText}>Entry: {item.entryFee} | Prize: {item.totalPrize}</Text>
           </View>
         )}
       />
@@ -92,6 +105,7 @@ const styles = StyleSheet.create({
   heading: { color: "#fff", fontSize: 18, fontWeight: "bold", marginVertical: 10 },
   input: { backgroundColor: "#fff", padding: 10, marginVertical: 5, borderRadius: 5 },
   matchItem: { padding: 10, backgroundColor: "#222", marginVertical: 5, borderRadius: 5 },
+  matchText: { color: "#fff" }
 });
 
 export default MatchManagement;

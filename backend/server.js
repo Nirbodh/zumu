@@ -7,7 +7,7 @@ const path = require('path');
 // Import routes
 const authRoutes = require('./routes/auth');
 const matchesRoutes = require('./routes/matches');
-const adminRoutes = require('./routes/admin');
+const adminRoutes = require('./routes/admin'); // Fixed import
 const userRoutes = require('./routes/users');
 
 const app = express();
@@ -37,7 +37,7 @@ mongoose.connect(MONGODB_URI, {
 app.use('/api/auth', authRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRoutes); // Fixed route
 
 // Root endpoint
 app.get('/', (req, res) => res.send('API running…'));

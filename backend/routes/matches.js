@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Match = require("../models/Match");
-const { authenticateToken } = require("../middleware/auth"); // Changed from authenticateToken to authenticateToken
+const authMiddleware = require("../middleware/auth"); // Make sure this path is correct
 
 // ✅ Get all matches
 router.get("/", async (req, res) => {
@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
 });
 
 // ✅ Join a match
-router.post("/:id/join", authenticateToken, async (req, res) => {
+router.post("/:id/join", authMiddleware, async (req, res) => {
   try {
     const match = await Match.findById(req.params.id);
     if (!match) return res.status(404).json({ error: "Match not found" });
@@ -34,7 +34,7 @@ router.post("/:id/join", authenticateToken, async (req, res) => {
 });
 
 // ✅ Match details (roomCode only if joined)
-router.get("/:id", authenticateToken, async (req, res) => {
+router.get("/:id", authMiddleware, async (req, res) => {
   try {
     const match = await Match.findById(req.params.id).lean();
     if (!match) return res.status(404).json({ error: "Match not found" });

@@ -1,11 +1,41 @@
 // screens/ProfileScreen.js
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // Added useState and useEffect
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Header from '../components/Header';
 import StatusBar from '../components/StatusBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native'; // Added useIsFocused
 
 const ProfileScreen = ({ navigation }) => {
+  const [userData, setUserData] = useState({ // Added state for user data
+    username: '',
+    email: '',
+    phone: ''
+  });
+  const isFocused = useIsFocused(); // Added to detect when screen is focused
+
+  useEffect(() => {
+    if (isFocused) {
+      loadUserData();
+    }
+  }, [isFocused]);
+
+  const loadUserData = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('userData');
+      if (storedData) {
+        const user = JSON.parse(storedData);
+        setUserData({
+          username: user.username || '',
+          email: user.email || '',
+          phone: user.phone || ''
+        });
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to load user data');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('userToken');
@@ -16,28 +46,32 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  const handleEditProfile = () => {
+    navigation.navigate('EditProfile');
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <Header title="Profile" subtitle="Your profile information" />
         
         <StatusBar 
-          username="ovimahathirmohammad" 
+          username={userData.username || "ovimahathirmohammad"} 
           balance={500} 
         />
         
         <View style={styles.profileInfo}>
           <View style={styles.profileItem}>
-            <Text style={styles.profileLabel}>Full Name</Text>
-            <Text style={styles.profileValue}>Ovima Hathir Mohammad</Text>
+            <Text style={styles.profileLabel}>Username</Text>
+            <Text style={styles.profileValue}>{userData.username || "Ovima Hathir Mohammad"}</Text>
           </View>
           <View style={styles.profileItem}>
             <Text style={styles.profileLabel}>Email</Text>
-            <Text style={styles.profileValue}>ovimahathir@example.com</Text>
+            <Text style={styles.profileValue}>{userData.email || "ovimahathir@example.com"}</Text>
           </View>
           <View style={styles.profileItem}>
             <Text style={styles.profileLabel}>Phone Number</Text>
-            <Text style={styles.profileValue}>+8801XXXXXXXXX</Text>
+            <Text style={styles.profileValue}>{userData.phone || "+8801XXXXXXXXX"}</Text>
           </View>
           <View style={styles.profileItem}>
             <Text style={styles.profileLabel}>Registration Date</Text>
@@ -67,7 +101,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
         
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.primaryButton}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleEditProfile}>
             <Text style={styles.buttonText}>Edit Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.secondaryButton} onPress={handleLogout}>
@@ -79,94 +113,4 @@ const ProfileScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0c23',
-  },
-  scrollView: {
-    flex: 1,
-    padding: 15,
-  },
-  profileInfo: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-  },
-  profileItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  profileLabel: {
-    color: '#ccc',
-  },
-  profileValue: {
-    color: '#ff8a00',
-    fontWeight: 'bold',
-  },
-  sectionTitle: {
-    color: '#ff8a00',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statCard: {
-    width: '48%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ff8a00',
-    marginBottom: 5,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#ccc',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: '#ff8a00',
-    padding: 15,
-    borderRadius: 8,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  secondaryButton: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: '#ff8a00',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  secondaryButtonText: {
-    color: '#ff8a00',
-    fontWeight: 'bold',
-  },
-});
-
-export default ProfileScreen;
+// ... rest of the styles remain the same

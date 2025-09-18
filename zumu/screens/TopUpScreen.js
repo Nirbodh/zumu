@@ -6,16 +6,22 @@ import {
   TouchableOpacity, 
   ScrollView, 
   StyleSheet,
-  Switch 
+  Switch,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import Header from '../components/Header';
 import StatusBar from '../components/StatusBar';
+import { api } from '../utils/api';
 
 const TopUpScreen = () => {
   const [playerId, setPlayerId] = useState('');
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [usePoints, setUsePoints] = useState(false);
+  const [showBkashNumber, setShowBkashNumber] = useState(false);
+  const [transactionId, setTransactionId] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const diamondPackages = [
     { id: 1, diamonds: 100, price: 0.99 },
@@ -25,20 +31,48 @@ const TopUpScreen = () => {
   ];
 
   const paymentMethods = [
-    { id: 'bkash', name: 'bKash' },
-    { id: 'nagad', name: 'Nagad' },
-    { id: 'rocket', name: 'Rocket' },
-    { id: 'paypal', name: 'PayPal' }
+    { id: 'bkash', name: 'bKash', color: '#e2136e' },
+    { id: 'nagad', name: 'Nagad', color: '#f60' },
+    { id: 'rocket', name: 'Rocket', color: '#784bd1' },
+    { id: 'paypal', name: 'PayPal', color: '#0070ba' }
   ];
 
-  const handleTopUp = () => {
-    // Will be implemented later
-    console.log('Top-up initiated:', {
-      playerId,
-      selectedPackage,
-      paymentMethod,
-      usePoints
-    });
+  const handleTopUp = async () => {
+    if (!playerId || !selectedPackage || !paymentMethod) {
+      Alert.alert('Error', 'Please fill all required fields');
+      return;
+    }
+
+    if (paymentMethod === 'bkash' && !transactionId) {
+      Alert.alert('Error', 'Please enter your transaction ID');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api('/wallet/topup', {
+        method: 'POST',
+        body: {
+          playerId,
+          package: selectedPackage,
+          paymentMethod,
+          transactionId,
+          usePoints
+        }
+      });
+
+      Alert.alert('Success', 'Top-up request submitted successfully!');
+      // Reset form
+      setPlayerId('');
+      setSelectedPackage(null);
+      setPaymentMethod('');
+      setTransactionId('');
+      setUsePoints(false);
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,7 +86,7 @@ const TopUpScreen = () => {
         />
         
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Enter Player ID</Text>
+          <Text style={styles.label}>Enter Player ID *</Text>
           <TextInput
             style={styles.input}
             value={playerId}
@@ -62,7 +96,7 @@ const TopUpScreen = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Select Diamond Package</Text>
+        <Text style={styles.sectionTitle}>Select Diamond Package *</Text>
         <View style={styles.packageGrid}>
           {diamondPackages.map((pkg) => (
             <TouchableOpacity
@@ -94,46 +128,71 @@ const TopUpScreen = () => {
           </View>
         </View>
 
-        {/* bKash Number Section - Added based on HTML file */}
-        <View style={styles.bkashSection}>
-          <Text style={styles.bkashTitle}>Send Money via bKash</Text>
-          <View style={styles.bkashNumberContainer}>
-            <Text style={styles.bkashNumber}>01751332386</Text>
-          </View>
-          <Text style={styles.bkashInstruction}>
-            Use your bKash app to send money to this number
-          </Text>
-          <Text style={styles.bkashNote}>
-            After sending, write the transaction ID below
-          </Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>Payment Method</Text>
+        <Text style={styles.sectionTitle}>Payment Method *</Text>
         <View style={styles.paymentMethods}>
           {paymentMethods.map((method) => (
             <TouchableOpacity
               key={method.id}
               style={[
                 styles.paymentOption,
-                paymentMethod === method.id && styles.paymentOptionActive
+                paymentMethod === method.id && styles.paymentOptionActive,
+                { borderColor: method.color }
               ]}
               onPress={() => setPaymentMethod(method.id)}
             >
-              <Text style={styles.paymentText}>{method.name}</Text>
+              <Text style={[
+                styles.paymentText,
+                paymentMethod === method.id && { color: method.color }
+              ]}>
+                {method.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <TouchableOpacity style={styles.uploadButton}>
-          <Text style={styles.uploadText}>Choose File</Text>
-          <Text style={styles.uploadSubtext}>Upload Payment Screenshot</Text>
-        </TouchableOpacity>
+        {paymentMethod === 'bkash' && (
+          <View style={styles.bkashSection}>
+            <TouchableOpacity 
+              style={styles.showNumberBtn}
+              onPress={() => setShowBkashNumber(!showBkashNumber)}
+            >
+              <Text style={styles.showNumberText}>
+                {showBkashNumber ? 'Hide bKash Number' : 'Show bKash Number'}
+              </Text>
+            </TouchableOpacity>
+            
+            {showBkashNumber && (
+              <>
+                <View style={styles.bkashNumberContainer}>
+                  <Text style={styles.bkashNumber}>01751332386</Text>
+                </View>
+                <Text style={styles.bkashInstruction}>
+                  Use your bKash app to send money to this number
+                </Text>
+                
+                <Text style={styles.label}>Transaction ID *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={transactionId}
+                  onChangeText={setTransactionId}
+                  placeholder="Enter your transaction ID"
+                  placeholderTextColor="#ccc"
+                />
+              </>
+            )}
+          </View>
+        )}
 
         <TouchableOpacity 
-          style={styles.submitButton}
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleTopUp}
+          disabled={loading}
         >
-          <Text style={styles.submitText}>Submit Top-Up</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitText}>Submit Top-Up</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -227,7 +286,29 @@ const styles = StyleSheet.create({
   toggleText: {
     color: '#ccc',
   },
-  // New styles for bKash section
+  paymentMethods: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  paymentOption: {
+    width: '48%',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  paymentOptionActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  paymentText: {
+    color: '#ccc',
+    fontWeight: 'bold',
+  },
   bkashSection: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 10,
@@ -235,11 +316,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: 'center',
   },
-  bkashTitle: {
-    color: '#ff8a00',
-    fontWeight: 'bold',
-    fontSize: 16,
+  showNumberBtn: {
+    backgroundColor: '#ff8a00',
+    padding: 10,
+    borderRadius: 8,
     marginBottom: 10,
+  },
+  showNumberText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   bkashNumberContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
@@ -258,60 +343,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 5,
   },
-  bkashNote: {
-    color: '#ff8a00',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  paymentMethods: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  paymentOption: {
-    width: '48%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  paymentOptionActive: {
-    borderColor: '#ff8a00',
-    backgroundColor: 'rgba(255, 138, 0, 0.2)',
-  },
-  paymentText: {
-    color: '#ccc',
-    fontWeight: 'bold',
-  },
-  uploadButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#ff8a00',
-    borderStyle: 'dashed',
-  },
-  uploadText: {
-    color: '#ff8a00',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  uploadSubtext: {
-    color: '#ccc',
-    fontSize: 12,
-  },
   submitButton: {
     backgroundColor: '#ff8a00',
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
+    marginBottom: 20,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#666',
   },
   submitText: {
     color: 'white',

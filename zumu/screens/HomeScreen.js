@@ -1,4 +1,3 @@
-// screens/HomeScreen.js
 import React, { useState, useEffect } from "react";
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import Header from "../components/Header";
@@ -9,10 +8,11 @@ import ParticipantsTable from "../components/ParticipantsTable";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "../utils/api";
 
-const HomeScreen = () => {
-  const [currentGame, setCurrentGame] = useState("pubg");
+const HomeScreen = ({ navigation }) => {
+  const [currentGame, setCurrentGame] = useState("all");
   const [currentMatchTab, setCurrentMatchTab] = useState("upcoming");
   const [matches, setMatches] = useState([]);
+  const [filteredMatches, setFilteredMatches] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +22,11 @@ const HomeScreen = () => {
 
   useEffect(() => {
     fetchMatches();
-  }, [currentMatchTab, currentGame]);
+  }, [currentMatchTab]);
+
+  useEffect(() => {
+    filterMatches();
+  }, [matches, currentGame, currentMatchTab]);
 
   const loadUser = async () => {
     try {
@@ -37,15 +41,22 @@ const HomeScreen = () => {
     try {
       setLoading(true);
       const allMatches = await api("/matches");
-      const filtered = allMatches.filter(
-        (m) => m.status === currentMatchTab && (currentGame === "all" || m.game === currentGame)
-      );
-      setMatches(filtered);
+      setMatches(allMatches);
     } catch (err) {
       Alert.alert("Error", "Failed to load matches");
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterMatches = () => {
+    let filtered = matches.filter(m => m.status === currentMatchTab);
+    
+    if (currentGame !== "all") {
+      filtered = filtered.filter(m => m.game === currentGame);
+    }
+    
+    setFilteredMatches(filtered);
   };
 
   const joinMatch = async (matchId) => {
@@ -87,7 +98,12 @@ const HomeScreen = () => {
           </View>
         ) : (
           <>
-            <MatchList matches={matches} onJoin={joinMatch} currentUserId={user?._id} />
+            <MatchList 
+              matches={filteredMatches} 
+              onJoin={joinMatch} 
+              currentUserId={user?._id}
+              navigation={navigation}
+            />
             <ParticipantsTable />
           </>
         )}

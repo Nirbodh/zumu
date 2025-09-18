@@ -33,18 +33,20 @@ const AdminLogin = ({ navigation, setUser }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
 
+      // Store only the admin token
+      await AsyncStorage.setItem("adminToken", data.token);
+
+      // Set user data in state
       const userData = {
         token: data.token,
         role: "admin",
         username: data.user.username,
         email: data.user.email,
       };
-
-      await AsyncStorage.setItem("userData", JSON.stringify(userData));
       setUser(userData);
 
       Alert.alert("✅ Success", "Welcome Admin!");
-      navigation.replace("Dashboard"); // ✅ Screen name ঠিক করা হলো
+      navigation.replace("AdminDashboard");
 
     } catch (err) {
       console.error("Login error:", err);

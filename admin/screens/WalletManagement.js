@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, FlatList, Alert, StyleSheet } from "react-native";
+import { View, Text, FlatList, Alert, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API = "https://zumu.onrender.com";
@@ -24,10 +24,10 @@ const WalletManagement = () => {
     }
   };
 
-  const approveTransaction = async (txnId) => {
+  const approveTransaction = async (id) => {
     try {
       const token = await AsyncStorage.getItem("adminToken");
-      const res = await fetch(`${API}/api/admin/transactions/${txnId}/approve`, {
+      const res = await fetch(`${API}/api/admin/transactions/${id}/approve`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -35,7 +35,7 @@ const WalletManagement = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to approve transaction");
 
-      Alert.alert("💰 Transaction approved");
+      Alert.alert("✅ Transaction approved");
       fetchTransactions();
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -49,8 +49,10 @@ const WalletManagement = () => {
         data={transactions}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View style={styles.txnItem}>
-            <Text style={{ color: "#fff" }}>{item.user?.username} → {item.amount} ({item.status})</Text>
+          <View style={styles.transactionItem}>
+            <Text style={{ color: "#fff" }}>
+              User: {item.userId} - {item.type} - ${item.amount} - {item.status}
+            </Text>
             {item.status === "pending" && (
               <Button title="Approve" onPress={() => approveTransaction(item._id)} />
             )}
@@ -64,7 +66,7 @@ const WalletManagement = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#0a0c23" },
   heading: { color: "#fff", fontSize: 18, fontWeight: "bold", marginVertical: 10 },
-  txnItem: { flexDirection: "row", justifyContent: "space-between", padding: 10, backgroundColor: "#222", marginVertical: 5, borderRadius: 5 },
+  transactionItem: { flexDirection: "row", justifyContent: "space-between", padding: 10, backgroundColor: "#222", marginVertical: 5, borderRadius: 5 },
 });
 
 export default WalletManagement;

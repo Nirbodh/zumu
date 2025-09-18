@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API = "https://zumu.onrender.com"; // তোমার backend URL বসাও
+const API = "https://zumu.onrender.com";
 
 const MatchManagement = () => {
   const [matches, setMatches] = useState([]);

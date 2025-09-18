@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const path = require('path');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -32,14 +33,25 @@ mongoose.connect(MONGODB_URI, {
   process.exit(1);
 });
 
-// Routes - Register admin routes first
-app.use('/api/admin', adminRoutes);
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => res.send('API running…'));
+
+// Handle 404 errors
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
 
 // Start server
 const PORT = process.env.PORT || 5000;

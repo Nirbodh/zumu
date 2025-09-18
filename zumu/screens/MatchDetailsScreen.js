@@ -1,92 +1,200 @@
-// screens/MatchDetailsScreen.js
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API = "https://zumu.onrender.com";
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import Header from '../components/Header';
+import StatusBar from '../components/StatusBar';
 
 const MatchDetailsScreen = ({ route }) => {
-  const { matchId } = route.params;
-  const [match, setMatch] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMatchDetails();
-  }, []);
-
-  const fetchMatchDetails = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('userToken');
-
-      const res = await fetch(`${API}/api/matches/${matchId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch match');
-      setMatch(data);
-    } catch (err) {
-      console.error("❌ Match Details Error:", err);
-      Alert.alert("Error", err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#ff8a00" />
-        <Text style={{ color: '#ccc', marginTop: 10 }}>Loading match...</Text>
-      </View>
-    );
-  }
-
-  if (!match) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ color: '#fff' }}>Match not found</Text>
-      </View>
-    );
-  }
+  const { match } = route.params;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{match.title}</Text>
-      <Text style={styles.info}>Game: {match.game}</Text>
-      <Text style={styles.info}>Status: {match.status}</Text>
-      <Text style={styles.info}>Entry Fee: {match.entryFee}</Text>
-      <Text style={styles.info}>Participants: {match.participants?.length}</Text>
+      <ScrollView>
+        <Header title="Classic Match Details" />
+        
+        <StatusBar 
+          username="Player123" 
+          balance={500} 
+        />
 
-      {/* ✅ Room Info শুধুমাত্র যদি API allow করে */}
-      {match.roomCode ? (
-        <View style={styles.roomBox}>
-          <Text style={styles.roomLabel}>Room Code: <Text style={styles.roomValue}>{match.roomCode}</Text></Text>
-          <Text style={styles.roomLabel}>Password: <Text style={styles.roomValue}>{match.roomPassword}</Text></Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>MATCH DETAILS</Text>
+          
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Title:</Text>
+            <Text style={styles.detailValue}>{match.title}</Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Match Schedule:</Text>
+            <Text style={styles.detailValue}>
+              Date: {new Date(match.startTime).toLocaleDateString()} Time: {new Date(match.startTime).toLocaleTimeString()}
+            </Text>
+          </View>
+          
+          <View style={styles.detailGrid}>
+            <View style={styles.gridItem}>
+              <Text style={styles.detailLabel}>Type:</Text>
+              <Text style={styles.detailValue}>{match.type || 'Solo'}</Text>
+            </View>
+            
+            <View style={styles.gridItem}>
+              <Text style={styles.detailLabel}>Version:</Text>
+              <Text style={styles.detailValue}>{match.version || 'Mobile'}</Text>
+            </View>
+            
+            <View style={styles.gridItem}>
+              <Text style={styles.detailLabel}>Match type:</Text>
+              <Text style={styles.detailValue}>PAID</Text>
+            </View>
+            
+            <View style={styles.gridItem}>
+              <Text style={styles.detailLabel}>Entry fee:</Text>
+              <Text style={styles.detailValue}>{match.entryFee}</Text>
+            </View>
+          </View>
         </View>
-      ) : (
-        <Text style={{ color: '#ff6666', marginTop: 10 }}>
-          Join first to see Room details!
-        </Text>
-      )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>PRIZE DETAILS</Text>
+          
+          <View style={styles.prizeGrid}>
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>Total Prize:</Text>
+              <Text style={styles.prizeValue}>{match.totalPrize}</Text>
+            </View>
+            
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>First Prize:</Text>
+              <Text style={styles.prizeValue}>40</Text>
+            </View>
+            
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>Third Prize:</Text>
+              <Text style={styles.prizeValue}>20</Text>
+            </View>
+            
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>Fifth Prize:</Text>
+              <Text style={styles.prizeValue}>10</Text>
+            </View>
+            
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>Per kill:</Text>
+              <Text style={styles.prizeValue}>{match.perKill}</Text>
+            </View>
+            
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>Second Prize:</Text>
+              <Text style={styles.prizeValue}>30</Text>
+            </View>
+            
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>Fourth Prize:</Text>
+              <Text style={styles.prizeValue}>10</Text>
+            </View>
+            
+            <View style={styles.prizeItem}>
+              <Text style={styles.prizeLabel}>Special:</Text>
+              <Text style={styles.prizeValue}>No</Text>
+            </View>
+          </View>
+        </View>
+
+        {match.roomId && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>ROOM INFORMATION</Text>
+            <View style={styles.roomInfo}>
+              <Text style={styles.roomLabel}>ROOM ID:</Text>
+              <Text style={styles.roomValue}>{match.roomId}</Text>
+            </View>
+            
+            {match.roomPassword && (
+              <View style={styles.roomInfo}>
+                <Text style={styles.roomLabel}>PASSWORD:</Text>
+                <Text style={styles.roomValue}>{match.roomPassword}</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0c23', padding: 20 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0c23' },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 10 },
-  info: { fontSize: 16, color: '#ccc', marginVertical: 4 },
-  roomBox: {
-    marginTop: 20,
-    backgroundColor: '#1c1e3c',
+  container: {
+    flex: 1,
+    backgroundColor: '#0a0c23',
     padding: 15,
-    borderRadius: 10,
   },
-  roomLabel: { fontSize: 16, color: '#ccc', marginBottom: 5 },
-  roomValue: { fontSize: 16, color: '#ff8a00', fontWeight: 'bold' },
+  section: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    color: '#ff8a00',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  detailLabel: {
+    color: '#ccc',
+    fontWeight: 'bold',
+    marginRight: 10,
+    width: 120,
+  },
+  detailValue: {
+    color: '#fff',
+    flex: 1,
+  },
+  detailGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: '48%',
+    marginBottom: 10,
+  },
+  prizeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  prizeItem: {
+    width: '48%',
+    marginBottom: 15,
+  },
+  prizeLabel: {
+    color: '#ccc',
+    fontSize: 14,
+    marginBottom: 5,
+  },
+  prizeValue: {
+    color: '#ff8a00',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  roomInfo: {
+    marginBottom: 10,
+  },
+  roomLabel: {
+    color: '#ccc',
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  roomValue: {
+    color: '#ff8a00',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
 
 export default MatchDetailsScreen;
